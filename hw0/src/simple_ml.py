@@ -124,6 +124,7 @@ def softmax_regression_epoch(X, y, theta, lr=0.1, batch=100):
     iters = int(np.ceil(X.shape[0] / batch))
     X_b: np.ndarray
     y_b: np.ndarray
+    print(X.shape) # 60000 x 784
     for i in range(iters):
         if i == iters - 1: # last batch
             X_b = X[i * batch: , :]
@@ -143,6 +144,7 @@ def softmax_regression_epoch(X, y, theta, lr=0.1, batch=100):
         
         # print(theta.shape, X_b.shape, Z.shape, I.shape)
         grad = X_b.T @ (Z - I) / X_b.shape[0]
+        # print(grad.shape) # 784 x 10
         theta -= lr * grad
     return
     ### END YOUR CODE

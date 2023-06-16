@@ -1,9 +1,9 @@
-// #include <pybind11/pybind11.h>
-// #include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 #include <cmath>
 #include <iostream>
 
-// namespace py = pybind11;
+namespace py = pybind11;
 
 
 void matmul(const float *A, const float *B, float *C, 
@@ -61,6 +61,7 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
      * Returns:
      *     (None)
      */
+    /// BEGIN YOUR CODE
     size_t iters = (size_t)(floor(1.0 * m) / batch);
     for (size_t i = 0; i < iters; ++i) {
         size_t cur_bs = batch;
@@ -88,19 +89,24 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
 
         auto *p_yb = &y[i * batch];
         float *I = new float[size_Z]{0};
-        for (int j = 0; j < cur_bs; ++j) {
+        for (size_t j = 0; j < cur_bs; ++j) {
             I[j * k + (size_t)p_yb[j]] = 1; // I[j][y[j]] = 1;
         }
 
-        float *Xb_T = new float[size_Z];
-        transpose(p_Xb, Xb_T, cur_bs, k);
-        for (int j = 0; j < size_Z; ++j) {
+        float *Xb_T = new float[cur_bs * n];
+        transpose(p_Xb, Xb_T, cur_bs, n);
+        for (size_t j = 0; j < size_Z; ++j) {
             Z[j] -= I[j];
         }
-        float *grad = new float[]
-    }
-    /// BEGIN YOUR CODE
 
+        // Xb_T of size (n, cur_bz), Z of size (cur, k)
+        float *grad = new float[n * k];
+        matmul(Xb_T, Z, grad, n, cur_bs, k);
+        for (size_t j = 0; j < n * k; ++j) {
+            grad[j] /= cur_bs;
+            theta[j] -= lr * grad[j];
+        }
+    }
     /// END YOUR CODE
 }
 
@@ -110,27 +116,27 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
  * wrap the function above in a Python module, and you do not need to make any
  * edits to the code
  */
-// PYBIND11_MODULE(simple_ml_ext, m) {
-//     m.def("softmax_regression_epoch_cpp",
-//     	[](py::array_t<float, py::array::c_style> X,
-//            py::array_t<unsigned char, py::array::c_style> y,
-//            py::array_t<float, py::array::c_style> theta,
-//            float lr,
-//            int batch) {
-//         softmax_regression_epoch_cpp(
-//         	static_cast<const float*>(X.request().ptr),
-//             static_cast<const unsigned char*>(y.request().ptr),
-//             static_cast<float*>(theta.request().ptr),
-//             X.request().shape[0],
-//             X.request().shape[1],
-//             theta.request().shape[1],
-//             lr,
-//             batch
-//            );
-//     },
-//     py::arg("X"), py::arg("y"), py::arg("theta"),
-//     py::arg("lr"), py::arg("batch"));
-// }
+PYBIND11_MODULE(simple_ml_ext, m) {
+    m.def("softmax_regression_epoch_cpp",
+    	[](py::array_t<float, py::array::c_style> X,
+           py::array_t<unsigned char, py::array::c_style> y,
+           py::array_t<float, py::array::c_style> theta,
+           float lr,
+           int batch) {
+        softmax_regression_epoch_cpp(
+        	static_cast<const float*>(X.request().ptr),
+            static_cast<const unsigned char*>(y.request().ptr),
+            static_cast<float*>(theta.request().ptr),
+            X.request().shape[0],
+            X.request().shape[1],
+            theta.request().shape[1],
+            lr,
+            batch
+           );
+    },
+    py::arg("X"), py::arg("y"), py::arg("theta"),
+    py::arg("lr"), py::arg("batch"));
+}
 
 int main() {
     const int ROWS = 3, COLS = 4, KOS = 2;
