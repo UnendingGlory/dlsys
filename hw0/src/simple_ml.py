@@ -20,7 +20,7 @@ def add(x, y):
         Sum of x + y
     """
     ### BEGIN YOUR CODE
-    pass
+    return x + y
     ### END YOUR CODE
 
 
@@ -48,7 +48,30 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    with gzip.open(image_filename) as f:
+        X_fd = f.read()
+    
+    # reference: https://docs.python.org/3/library/struct.html,
+    #            https://xinancsd.github.io/MachineLearning/mnist_parser.html
+    # read first four bytes in big endian mode
+    _, num_images, rows, cols = struct.unpack_from('>4i', X_fd, 0)
+    
+    image_pixel =  rows * cols 
+    img_fmt = '>' + str(num_images * image_pixel) + 'B'
+    
+    X = struct.unpack_from(img_fmt, X_fd, offset=16)
+    X = np.array(X, dtype=np.float32).reshape(num_images, image_pixel)
+    X = X / 255 # normalize
+
+    # read first two bytes
+    with gzip.open(label_filename) as f:
+        y_fd = f.read()
+    _, num_label = struct.unpack_from('>2i', y_fd, 0)
+    label_fmt = '>' + str(num_label) + 'B'
+    y = struct.unpack_from(label_fmt, y_fd, offset=8)
+    y = np.array(y, dtype=np.uint8)
+    
+    return X, y
     ### END YOUR CODE
 
 
@@ -68,11 +91,18 @@ def softmax_loss(Z, y):
         Average softmax loss over the sample.
     """
     ### BEGIN YOUR CODE
-    pass
+    loss = np.log(np.sum(np.exp(Z), axis=1))
+    
+    # half open interval
+    indexed_logits = Z[np.arange(0, y.shape[0], 1), y]
+    
+    loss -= indexed_logits
+    loss = np.mean(loss)
+    return loss
     ### END YOUR CODE
 
 
-def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
+def softmax_regression_epoch(X, y, theta, lr=0.1, batch=100):
     """ Run a single epoch of SGD for softmax regression on the data, using
     the step size lr and specified batch size.  This function should modify the
     theta matrix in place, and you should iterate through batches in X _without_
@@ -91,7 +121,30 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    iters = int(np.ceil(X.shape[0] / batch))
+    X_b: np.ndarray
+    y_b: np.ndarray
+    for i in range(iters):
+        if i == iters - 1: # last batch
+            X_b = X[i * batch: , :]
+            y_b = y[i * batch:]
+        else:
+            X_b = X[i * batch: (i + 1) * batch, :]
+            y_b = y[i * batch: (i + 1) * batch]
+            
+        # print(X_b.shape, y_b.shape)
+        Z = np.exp(X_b @ theta) # shape: batch x input_dim
+        sum_example: np.ndarray = np.sum(Z, axis=1) # shape: 1 x batch
+        sum_example = sum_example.reshape(sum_example.shape[0], 1) # shape: batch x 1
+        Z = Z / sum_example # broadcasting on the col to div
+        
+        I = np.zeros_like(Z)
+        I[np.arange(0, y_b.shape[0], 1), y_b] = 1
+        
+        # print(theta.shape, X_b.shape, Z.shape, I.shape)
+        grad = X_b.T @ (Z - I) / X_b.shape[0]
+        theta -= lr * grad
+    return
     ### END YOUR CODE
 
 
@@ -118,7 +171,36 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    iters = int(np.ceil(X.shape[0] / batch))
+    X_b: np.ndarray
+    y_b: np.ndarray
+    
+    for i in range(iters):
+        if i == iters - 1: # last batch
+            X_b = X[i * batch: , :]
+            y_b = y[i * batch:]
+        else:
+            X_b = X[i * batch: (i + 1) * batch, :]
+            y_b = y[i * batch: (i + 1) * batch]
+        Z1 = np.maximum(0, X_b @ W1)
+        
+        # G2 is the same as the part in softmax_regression_epoch
+        G2 = np.exp(Z1 @ W2) # shape: batch x input_dim
+        sum_example: np.ndarray = np.sum(G2, axis=1) # shape: 1 x batch
+        sum_example = sum_example.reshape(sum_example.shape[0], 1) # shape: batch x 1
+        G2 = G2 / sum_example # broadcasting on the col to div
+        I = np.zeros_like(G2)
+        I[np.arange(0, y_b.shape[0], 1), y_b] = 1
+        G2 -= I
+
+        # print(Z1.shape, G2.shape, W2.shape)
+        G1 = np.zeros_like(Z1)
+        # * is the hadamard product in numpy
+        G1 = np.where(Z1 > 0, 1, 0) * (G2 @ W2.T)
+        
+        W1 -= lr * (X_b.T @ G1) / X_b.shape[0]
+        W2 -= lr * (Z1.T @ G2) / X_b.shape[0]
+    return
     ### END YOUR CODE
 
 
