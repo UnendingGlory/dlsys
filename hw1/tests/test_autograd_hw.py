@@ -389,7 +389,7 @@ def test_topo_sort():
                      np.array([[4.63946401]])])
 
     topo_order = np.array([x.numpy() for x in ndl.autograd.find_topo_sort([c1])])
-
+    print('topo_order', topo_order)
     assert len(soln) == len(topo_order)
     np.testing.assert_allclose(topo_order, soln, rtol=1e-06, atol=1e-06)
 
@@ -656,7 +656,35 @@ def submit_nn_epoch_ndl():
     mugrade.submit(loss_err(ndl.Tensor(np.maximum(X@W1.numpy(),0))@W2, y))
 
 if __name__ == "__main__":
+    # dive into matmul gradient
     # gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(6, 6, 5, 4)), ndl.Tensor(np.random.randn(6, 6, 4, 3)))
-    gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(2, 2, 2)), ndl.Tensor(np.random.randn(2, 1)))
+    # gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(2, 2, 2)), ndl.Tensor(np.random.randn(2, 1)))
     # gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(6, 6, 5, 4)), ndl.Tensor(np.random.randn(4, 3)))
     # gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(5, 4)), ndl.Tensor(np.random.randn(6, 6, 4, 3)))
+    
+    # dive into broadcast_to gradient
+    # gradient_check(ndl.broadcast_to, ndl.Tensor(np.random.randn(3, 1)), shape=(3, 3))   # [[3], [3], [3]]
+    # gradient_check(ndl.broadcast_to, ndl.Tensor(np.random.randn(1, 3)), shape=(3, 3))   # [3, 3, 3]
+    # gradient_check(ndl.broadcast_to, ndl.Tensor(np.random.randn(1,)), shape=(3, 3, 3))  # [27]
+    # gradient_check(ndl.broadcast_to, ndl.Tensor(np.random.randn()), shape=(3, 3, 3))    #  [27]
+    # gradient_check(ndl.broadcast_to, ndl.Tensor(np.random.randn(5,4,1)), shape=(5,4,3)) # [[3], [3], ...] shape: (5,4)
+    # gradient_check(ndl.broadcast_to, ndl.Tensor(np.random.randn(3,1)), shape=(2,1,3,1)) # [[2], [2], [2]]
+    # gradient_check(ndl.broadcast_to, ndl.Tensor(np.random.randn(3,1)), shape=(2,2,3,1)) # [[4], [4], [4]]
+    # gradient_check(ndl.broadcast_to, ndl.Tensor(np.random.randn(2,1,1)), shape=(3,2,2,2)) # [[[12]],[[12]]]
+    
+    # test_topo_sort()
+    
+    # gradient_check(lambda A,B,C : ndl.summation((A@B+C)*(A@B), axes=None),
+    #                ndl.Tensor(np.random.randn(10,9)),
+    #                ndl.Tensor(np.random.randn(9,8)),
+    #                ndl.Tensor(np.random.randn(10,8)), backward=True)
+    
+    # test_softmax_loss_ndl()
+    
+    # np.testing.assert_allclose(ndl.relu(ndl.Tensor([[-46.9 , -48.8 , -45.45, -49.  ],
+    #    [-49.75, -48.75, -45.8 , -49.25],
+    #    [-45.65, -45.25, -49.3 , -47.65]])).numpy(), np.array([[0., 0., 0., 0.],
+    #    [0., 0., 0., 0.],
+    #    [0., 0., 0., 0.]]))
+    # gradient_check(ndl.relu, ndl.Tensor(np.random.randn(5,4)))
+    test_nn_epoch_ndl()
