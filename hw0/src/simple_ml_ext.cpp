@@ -106,6 +106,12 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
             grad[j] /= cur_bs;
             theta[j] -= lr * grad[j];
         }
+
+        delete []grad;
+        delete []Xb_T;
+        delete []I;
+        delete []sum_of_cols;
+        delete []Z;
     }
     /// END YOUR CODE
 }
