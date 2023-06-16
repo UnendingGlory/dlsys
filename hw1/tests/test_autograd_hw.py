@@ -654,3 +654,9 @@ def submit_nn_epoch_ndl():
     mugrade.submit(np.linalg.norm(W1.numpy()))
     mugrade.submit(np.linalg.norm(W2.numpy()))
     mugrade.submit(loss_err(ndl.Tensor(np.maximum(X@W1.numpy(),0))@W2, y))
+
+if __name__ == "__main__":
+    # gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(6, 6, 5, 4)), ndl.Tensor(np.random.randn(6, 6, 4, 3)))
+    gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(2, 2, 2)), ndl.Tensor(np.random.randn(2, 1)))
+    # gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(6, 6, 5, 4)), ndl.Tensor(np.random.randn(4, 3)))
+    # gradient_check(ndl.matmul, ndl.Tensor(np.random.randn(5, 4)), ndl.Tensor(np.random.randn(6, 6, 4, 3)))
