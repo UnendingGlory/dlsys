@@ -93,7 +93,7 @@ class Linear(Module):
 
     def forward(self, X: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        ops.matmul(self.in_features, X) + 
         ### END YOUR SOLUTION
 
 
