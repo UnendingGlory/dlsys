@@ -49,6 +49,7 @@ class CPUDevice(Device):
     def rand(self, *shape):
         # note: numpy doesn't support types within standard random routines, and 
         # .astype("float32") does work if we're generating a singleton
+        print(shape)
         return numpy.random.rand(*shape)
 
     def one_hot(self, n, i, dtype="float32"):
@@ -364,9 +365,10 @@ class Tensor(Value):
             return needle.ops.MulScalar(other)(self)
 
     def __pow__(self, other):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        if isinstance(other, Tensor):
+            raise NotImplementedError()
+        else:
+            return needle.ops.PowerScalar(other)(self)
 
     def __sub__(self, other):
         if isinstance(other, Tensor):
