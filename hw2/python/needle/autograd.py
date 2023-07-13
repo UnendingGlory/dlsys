@@ -145,7 +145,7 @@ class Value:
     cached_data: NDArray
     requires_grad: bool
 
-    def realize_cached_data(self):
+    def realize_cached_data(self) -> NDArray:
         """Run compute to realize the cached data"""
         # avoid recomputation
         if self.cached_data is not None:
@@ -473,6 +473,7 @@ def topo_sort_dfs(node, visited, topo_order):
     for input in node.inputs:
         if input not in visited:
             topo_sort_dfs(input, visited, topo_order)
+    visited.add(node)
     topo_order.append(node)
     ### END YOUR SOLUTION
 

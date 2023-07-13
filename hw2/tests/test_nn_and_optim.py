@@ -1109,4 +1109,5 @@ def submit_mlp_resnet():
 
 
 if __name__ == "__main__":
-    test_init_xavier_uniform()
+    # test_init_xavier_uniform()
+    test_nn_flatten_forward_2()

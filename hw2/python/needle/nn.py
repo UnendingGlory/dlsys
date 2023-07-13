@@ -88,47 +88,68 @@ class Linear(Module):
         self.out_features = out_features
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        # [3, 4]
+        self.weight = Parameter(init.kaiming_uniform(fan_in=in_features, 
+                                                     fan_out=out_features,
+                                                     device=device,
+                                                     dtype=dtype,
+                                                     requires_grad=True))
+        # [4, 1]
+        self.bias = None
+        if bias:
+            self.bias = Parameter(init.kaiming_uniform(fan_in=out_features, 
+                                                       fan_out=1,
+                                                       device=device,
+                                                       dtype=dtype,
+                                                       requires_grad=True)).transpose()
         ### END YOUR SOLUTION
 
     def forward(self, X: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        ops.matmul(self.in_features, X) + 
+        out = ops.matmul(X, self.weight)
+        if self.bias:
+            out += self.bias.broadcast_to(out.shape)
+        return out            
         ### END YOUR SOLUTION
 
 
 
 class Flatten(Module):
-    def forward(self, X):
+    def forward(self, X: Tensor):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return X.reshape((X.shape[0], -1)) # unspecified value is to be filled
         ### END YOUR SOLUTION
 
 
 class ReLU(Module):
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return ops.relu(x)
         ### END YOUR SOLUTION
 
 
 class Sequential(Module):
     def __init__(self, *modules):
         super().__init__()
-        self.modules = modules
+        self.modules = modules # save as tuple
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        input = x
+        for module in self.modules:
+            output = module(input)
+            input = output
+        return output
         ### END YOUR SOLUTION
 
 
 class SoftmaxLoss(Module):
     def forward(self, logits: Tensor, y: Tensor):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        one_hot_y = init.one_hot(logits.shape[1], y)
+        loss = ops.logsumexp(logits, axes=(1,)) - ops.summation(ops.multiply(logits, one_hot_y), axes=(1,))
+        return ops.summation(loss) / logits.shape[0]
         ### END YOUR SOLUTION
-
 
 
 class BatchNorm1d(Module):
@@ -154,12 +175,18 @@ class LayerNorm1d(Module):
         self.dim = dim
         self.eps = eps
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.weights = Parameter(init.ones(self.dim, requires_grad=True))
+        self.bias = Parameter(init.zeros(self.dim, requires_grad=True))
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        '''
+        batches in the first dim and features on the second
+        '''                
+        mean = (ops.summation(x, (1, )) / x.shape[1]).reshape((x.shape[0], 1)).broadcast_to(x.shape)
+        var = (ops.summation((x - mean)**2, (1, )) / x.shape[1]).reshape((x.shape[0], 1)).broadcast_to(x.shape)
+        return self.weights.broadcast_to(x.shape) * ((x - mean) / (var + self.eps)**0.5) + self.bias.broadcast_to(x.shape)
         ### END YOUR SOLUTION
 
 

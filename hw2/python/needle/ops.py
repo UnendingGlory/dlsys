@@ -133,7 +133,7 @@ class PowerScalar(TensorOp):
 
     def compute(self, a: NDArray) -> NDArray:
         ### BEGIN YOUR SOLUTION
-        return self.scalar**a
+        return a ** self.scalar
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
@@ -193,9 +193,13 @@ class Transpose(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
+        if len(a.shape) <= 1:
+            return array_api.transpose(a)
+        
         axes = list(range(len(a.shape))) # contains a permutation of [0,1,…,N-1]
         if not self.axes: # maybe None, default the last two axis
-            axes = axes[:-2] + [axes[-1], axes[-2]]
+            if len(axes) > 1:
+                axes = axes[:-2] + [axes[-1], axes[-2]]
         else:
             axes[self.axes[0]], axes[self.axes[1]] = axes[self.axes[1]], axes[self.axes[0]] # swap
         
@@ -377,12 +381,28 @@ class LogSumExp(TensorOp):
 
     def compute(self, Z):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        # default for sum all elements
+        max_z = array_api.max(Z, axis=self.axes, keepdims=True) # keepdims here
+        E_Z = array_api.exp(Z - max_z)
+        max_z_squeezed = array_api.squeeze(max_z, axis=self.axes)
+        return array_api.log(array_api.sum(E_Z, axis=self.axes)) + max_z_squeezed
         ### END YOUR SOLUTION
 
-    def gradient(self, out_grad, node):
+    def gradient(self, out_grad, node: Tensor):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        z = node.inputs[0]
+        max_z = z.realize_cached_data().max(axis=self.axes, keepdims=True)
+        e_z = exp(z - max_z) # shape of e_z is the same as input
+        sum_e_z = summation(e_z, axes=self.axes)
+        
+        sum_e_z_grad = divide(out_grad, sum_e_z)
+        # unsqueeze shape of sum_e_z_grad and broadcast to input shape
+        expand_shape = list(z.shape)
+        axes = range(len(z.shape)) if self.axes is None else self.axes
+        for axe in axes:
+            expand_shape[axe] = 1
+        sum_e_z_grad = sum_e_z_grad.reshape(expand_shape).broadcast_to(z.shape)
+        return multiply(e_z, sum_e_z_grad)
         ### END YOUR SOLUTION
 
 
