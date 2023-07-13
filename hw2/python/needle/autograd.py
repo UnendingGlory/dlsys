@@ -469,11 +469,11 @@ def topo_sort_dfs(node, visited, topo_order):
     """Post-order DFS"""
     ### BEGIN YOUR SOLUTION
     # no need for recursion boundary
-
+    visited.add(node)
+    
     for input in node.inputs:
         if input not in visited:
             topo_sort_dfs(input, visited, topo_order)
-    visited.add(node)
     topo_order.append(node)
     ### END YOUR SOLUTION
 
