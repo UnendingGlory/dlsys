@@ -1110,4 +1110,5 @@ def submit_mlp_resnet():
 
 if __name__ == "__main__":
     # test_init_xavier_uniform()
-    test_nn_batchnorm_running_mean_1()
+    # test_nn_batchnorm_running_mean_1()
+    test_nn_dropout_forward_1()
