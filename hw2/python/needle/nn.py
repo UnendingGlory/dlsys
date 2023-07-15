@@ -101,7 +101,7 @@ class Linear(Module):
                                                        fan_out=1,
                                                        device=device,
                                                        dtype=dtype,
-                                                       requires_grad=True)).transpose()
+                                                       requires_grad=True).transpose())
         ### END YOUR SOLUTION
 
     def forward(self, X: Tensor) -> Tensor:
@@ -147,8 +147,9 @@ class SoftmaxLoss(Module):
     def forward(self, logits: Tensor, y: Tensor):
         ### BEGIN YOUR SOLUTION
         one_hot_y = init.one_hot(logits.shape[1], y)
-        loss = ops.logsumexp(logits, axes=(1,)) - ops.summation(ops.multiply(logits, one_hot_y), axes=(1,))
-        return ops.summation(loss) / logits.shape[0]
+        # !divide logits by shape first to avoid float32 overflow
+        loss = ops.logsumexp(logits, axes=(1,)) / logits.shape[0] - ops.summation(ops.multiply(logits / logits.shape[0], one_hot_y), axes=(1,))
+        return ops.summation(loss) 
         ### END YOUR SOLUTION
 
 
