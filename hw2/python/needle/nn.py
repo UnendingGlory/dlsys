@@ -159,13 +159,25 @@ class BatchNorm1d(Module):
         self.eps = eps
         self.momentum = momentum
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.weight = Parameter(init.ones(self.dim, requires_grad=True))
+        self.bias = Parameter(init.zeros(self.dim, requires_grad=True))
+        self.running_mean = init.zeros(self.dim, requires_grad=False)
+        self.running_var = init.ones(self.dim, requires_grad=False)
         ### END YOUR SOLUTION
 
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        if self.training:
+            batch_mean = ops.summation(x, (0, )) / x.shape[0] # shape of (n, 1)
+            batch_var = ops.summation((x - batch_mean.broadcast_to(x.shape))**2, (0, )) / x.shape[0]
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * batch_mean
+            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * batch_var
+            normed = (x - batch_mean.broadcast_to(x.shape)) / (batch_var.broadcast_to(x.shape) + self.eps)**0.5
+            return self.weight.broadcast_to(x.shape) * normed + self.bias.broadcast_to(x.shape)
+        else:
+            normed = (x - self.running_mean.broadcast_to(x.shape)) / (self.running_var.broadcast_to(x.shape) + self.eps)**0.5
+            return self.weight.broadcast_to(x.shape) * normed + self.bias.broadcast_to(x.shape)
         ### END YOUR SOLUTION
 
 
@@ -175,7 +187,7 @@ class LayerNorm1d(Module):
         self.dim = dim
         self.eps = eps
         ### BEGIN YOUR SOLUTION
-        self.weights = Parameter(init.ones(self.dim, requires_grad=True))
+        self.weight = Parameter(init.ones(self.dim, requires_grad=True))
         self.bias = Parameter(init.zeros(self.dim, requires_grad=True))
         ### END YOUR SOLUTION
 
@@ -186,7 +198,7 @@ class LayerNorm1d(Module):
         '''                
         mean = (ops.summation(x, (1, )) / x.shape[1]).reshape((x.shape[0], 1)).broadcast_to(x.shape)
         var = (ops.summation((x - mean)**2, (1, )) / x.shape[1]).reshape((x.shape[0], 1)).broadcast_to(x.shape)
-        return self.weights.broadcast_to(x.shape) * ((x - mean) / (var + self.eps)**0.5) + self.bias.broadcast_to(x.shape)
+        return self.weight.broadcast_to(x.shape) * ((x - mean) / (var + self.eps)**0.5) + self.bias.broadcast_to(x.shape)
         ### END YOUR SOLUTION
 
 
