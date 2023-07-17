@@ -137,9 +137,8 @@ class Sequential(Module):
         ### BEGIN YOUR SOLUTION
         input = x
         for module in self.modules:
-            output = module(input)
-            input = output
-        return output
+            input = module(input)
+        return input
         ### END YOUR SOLUTION
 
 
@@ -172,8 +171,9 @@ class BatchNorm1d(Module):
         if self.training:
             batch_mean = ops.summation(x, (0, )) / x.shape[0] # shape of (n, 1)
             batch_var = ops.summation((x - batch_mean.broadcast_to(x.shape))**2, (0, )) / x.shape[0]
-            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * batch_mean
-            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * batch_var
+            # detach to cpu to compute
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * batch_mean.data
+            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * batch_var.data
             normed = (x - batch_mean.broadcast_to(x.shape)) / (batch_var.broadcast_to(x.shape) + self.eps)**0.5
             return self.weight.broadcast_to(x.shape) * normed + self.bias.broadcast_to(x.shape)
         else:
