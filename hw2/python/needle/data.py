@@ -118,15 +118,11 @@ class DataLoader:
         ### BEGIN YOUR SOLUTION
         if self.idx >= len(self.ordering):
             raise StopIteration
-        samples = np.array([self.dataset[i] for i in self.ordering[self.idx]])
+        batch_idx = self.ordering[self.idx]
+        samples = self.dataset[batch_idx]
         self.idx += 1
-        # return [Tensor(np.stack([samples[i][j] for i in range(len(samples))])) for j in range(len(samples[0]))]
-        # batched_samples = np.stack(samples, axis=1)
-        data = [samples[i][0] for i in range(len(samples))]
-        data = np.stack(data)
-        label = [samples[i][1] for i in range(len(samples))]
-        label = np.stack(label)
-        return [Tensor([[data]]), Tensor(label)]
+        return [Tensor(sample) for sample in samples]
+    
         ### END YOUR SOLUTION
 
 
@@ -196,10 +192,18 @@ class MNISTDataset(Dataset):
 
     def __getitem__(self, index) -> object:
         ### BEGIN YOUR SOLUTION
-        index_img = self.img[index].reshape(self.height, self.width, self.channel)
-        tform_images = self.apply_transforms(index_img)
+        # index may be an integer or a list
+        if len(self.img[index].shape) > 1:
+            tform_images = [self.apply_transforms(img.reshape(self.height, self.width, self.channel)) \
+                        for img in self.img[index]]
+        
+            tform_images = np.vstack(tform_images)
+        else:
+            index_img = self.img[index].reshape(self.height, self.width, self.channel)
+            tform_images = self.apply_transforms(index_img)    
+        
+        tform_images = tform_images.reshape((-1, self.height * self.width))
         return (tform_images, self.label[index])
-        # return np.array([tform_images, self.label[index]], dtype=object)
         ### END YOUR SOLUTION
 
     def __len__(self) -> int:

@@ -381,6 +381,6 @@ if __name__ == "__main__":
     # test_batch_sampler()
     # test_collate_mnist()
     # test_mnist_dataset()
-    # test_dataloader()
-    
     test_dataloader_mnist()
+    
+    # test_dataloader_mnist()
