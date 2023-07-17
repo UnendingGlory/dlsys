@@ -72,7 +72,12 @@ def train_mnist(batch_size=100, epochs=10, optimizer=ndl.optim.Adam,
         train_err, train_loss = epoch(train_dataloader, resnet, opt=opt)
         # print("epoch {} finish, train_err: {}, train_loss: {}".format(i, train_err, train_loss))
         
-    test_err, test_loss = epoch(train_dataloader, resnet)
+    test_dataset = ndl.data.MNISTDataset(os.path.join(data_dir, "t10k-images-idx3-ubyte.gz"),
+                                          os.path.join(data_dir, "t10k-labels-idx1-ubyte.gz"))
+    test_dataloader = ndl.data.DataLoader(dataset=test_dataset,
+                                           batch_size=batch_size,
+                                           shuffle=True)
+    test_err, test_loss = epoch(test_dataloader, resnet)
     return train_err, train_loss, test_err, test_loss
     ### END YOUR SOLUTION
 
