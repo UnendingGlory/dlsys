@@ -30,7 +30,7 @@ class SGD(Optimizer):
             # grad with weight_decay weight
             grad = w.grad.data + self.weight_decay * w.data
             self.u[w] = self.momentum * self.u[w] + (1 - self.momentum) * grad
-            w.data -= self.lr * self.u[w]
+            w.data -= ndl.Tensor((self.lr * self.u[w]).numpy().astype("float32"))
         ### END YOUR SOLUTION
 
 
@@ -64,5 +64,6 @@ class Adam(Optimizer):
             self.v[w] = self.beta2 * self.v[w] + (1 - self.beta2) * (grad.data ** 2)
             m_hat = self.m[w] / (1 - self.beta1 ** self.t)
             v_hat = self.v[w] / (1 - self.beta2 ** self.t)
-            w.data -= self.lr * m_hat / (v_hat**0.5 + self.eps)   
+            # to avoid float32 overflow
+            w.data -= ndl.Tensor((self.lr * m_hat / (v_hat**0.5 + self.eps)).numpy().astype("float32"))
         ### END YOUR SOLUTION
