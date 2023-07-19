@@ -247,7 +247,7 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        if self.size() != prod(new_shape):
+        if self.size != prod(new_shape):
             raise ValueError
         
         return NDArray.make(new_shape, device=self.device, handle=self._handle)
@@ -298,11 +298,11 @@ class NDArray:
 
         ### BEGIN YOUR SOLUTION
         '''The stride of the axis with dimension 1 is 0'''
-        for i in self.shape:
+        for i in range(len(self.shape)):
             if new_shape[i] != self.shape[i] and self.shape[i] != 1:
                 raise AssertionError
         new_strides = list(self.strides) + [0] * (len(new_shape) - len(self.shape))
-        for i in self.shape:
+        for i in range(len(self.shape)):
             if new_shape[i] != self.shape[i] and self.shape[i] == 1:
                 new_strides[i] = 0
         return NDArray.make(shape=new_shape, strides=tuple(new_strides),
@@ -369,8 +369,8 @@ class NDArray:
         assert len(idxs) == self.ndim, "Need indexes equal to number of dimensions"
 
         ### BEGIN YOUR SOLUTION
-        # such as a[1:5:2, 1:4:3, 2:6:1], need to use offset
-        new_shape = tuple((idx.stop - idx.start) // idx.step + 1 for idx in idxs)
+        # eg. a[1:5:2, 1:4:3, 2:6:1], need to use offset
+        new_shape = tuple((idx.stop - idx.start + idx.step - 1) // idx.step for idx in idxs)
         new_strides = []
         offset = 0
         for stride, idx in zip(self.strides, idxs):
