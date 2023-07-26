@@ -337,7 +337,15 @@ void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, uin
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  for (size_t i = 0; i < m; ++i) {
+    for (size_t j = 0; j < p; ++j) {
+      out->ptr[i * p + j] = 0;
+      for (size_t k = 0; k < n; ++k) {
+        out->ptr[i * p + j] += a.ptr[i * n + k] * b.ptr[k * p + j];
+      }
+    }
+    
+  }
   /// END YOUR SOLUTION
 }
 
@@ -367,7 +375,13 @@ inline void AlignedDot(const float* __restrict__ a,
   out = (float*)__builtin_assume_aligned(out, TILE * ELEM_SIZE);
 
   /// BEGIN YOUR SOLUTION
-  
+  for (size_t i = 0; i < TILE; ++i) {
+    for (size_t j = 0; j < TILE; ++j) {
+      for (size_t k = 0; k < TILE; ++k) {
+        out[i * TILE + j] += a[i * TILE + k] * b[k * TILE + j];  
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
@@ -381,7 +395,7 @@ void MatmulTiled(const AlignedArray& a, const AlignedArray& b, AlignedArray* out
    * function should call `AlignedDot()` implemented above).
    *
    * Note that this function will only be called when m, n, p are all multiples of TILE, so you can
-   * assume that this division happens without any remainder.
+   * assume that this division happens without - remainder.
    *
    * Args:
    *   a: compact 4D array of size m/TILE x n/TILE x TILE x TILE
@@ -393,7 +407,32 @@ void MatmulTiled(const AlignedArray& a, const AlignedArray& b, AlignedArray* out
    *
    */
   /// BEGIN YOUR SOLUTION
-  
+  // 2D array normal implementation
+  // for (int i = 0; i < m * p; i++) out->ptr[i] = 0;
+  // for (size_t i = 0; i < m; i += TILE) {
+  //   for (size_t j = 0; j < p; j += TILE) {
+  //     for (size_t k = 0; k < n; k += TILE) {
+  //       AlignedDot(&a.ptr[i * n + k], &b.ptr[k * p + j], &out->ptr[i * p + j]);
+  //     }
+  //   }
+  // }
+
+  // 4D compact array implementation
+  for (int i = 0; i < m * p; i++) out->ptr[i] = 0;
+  uint32_t m_tiles = (m + TILE - 1) / TILE, n_tiles = (n + TILE - 1) / TILE,
+           p_tiles = (p + TILE - 1) / TILE; // number of tiles
+
+  // each tile occpies a continuous memory
+  // we need to find the number of the tile block
+  for (int i = 0; i < m_tiles; i++) {
+    for (int j = 0; j < p_tiles; j++) {
+      for (int k = 0; k < n_tiles; k++) {
+        AlignedDot(a.ptr + (i * n_tiles + k) * TILE * TILE, 
+                   b.ptr + (k * p_tiles + j) * TILE * TILE, 
+                   out->ptr + (i * p_tiles + j) * TILE * TILE);
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
