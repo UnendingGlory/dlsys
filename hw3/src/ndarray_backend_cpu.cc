@@ -422,7 +422,7 @@ void MatmulTiled(const AlignedArray& a, const AlignedArray& b, AlignedArray* out
   uint32_t m_tiles = (m + TILE - 1) / TILE, n_tiles = (n + TILE - 1) / TILE,
            p_tiles = (p + TILE - 1) / TILE; // number of tiles
 
-  // each tile occpies a continuous memory
+  // each tile occpies a continuous memory of size TILE * TILE
   // we need to find the number of the tile block
   for (int i = 0; i < m_tiles; i++) {
     for (int j = 0; j < p_tiles; j++) {
