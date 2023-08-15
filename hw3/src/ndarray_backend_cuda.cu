@@ -420,7 +420,22 @@ void EwiseTanh(const CudaArray& a, CudaArray* out) {
 // Elementwise and scalar operations
 ////////////////////////////////////////////////////////////////////////////////
 
+__global__ void MatmulKernel(const scalar_t* a, const scalar_t* b, scalar_t* out,
+                             uint32_t M, uint32_t N, uint32_t P) {
+  size_t x = blockDim.x * blockIdx.x + threadIdx.x;
+  size_t y = blockDim.y * blockIdx.y + threadIdx.y;
+  if (x >= M || y >= P) {
+    return;
+  }
+  scalar_t sum = 0;
+  for (size_t i = 0; i < N; ++i) {
+    sum += a[x * N + i] * b[i * P + y];
+  }
+  out[x * P + y] = sum;
+}
 
+
+// TODO: shared memory matmul
 
 void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, uint32_t N,
             uint32_t P) {
@@ -447,7 +462,11 @@ void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, 
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  const size_t thread_num_x = 16, thread_num_y = 16;
+  CudaDims dim;
+  dim.block = dim3(thread_num_x, thread_num_y, 1);
+  dim.grid = dim3((M + thread_num_x - 1) / thread_num_x, (thread_num_y + P - 1) / thread_num_y, 1);
+  MatmulKernel<<<dim.grid, dim.block>>> (a.ptr, b.ptr, out->ptr, M, N, P);
   /// END YOUR SOLUTION
 }
 
