@@ -2,9 +2,15 @@ cmake_minimum_required(VERSION 3.2)
 project(needle C CXX)
 
 # find correct version of Python
+# execute_process(COMMAND python3-config --prefix
+#   OUTPUT_VARIABLE Python_ROOT_DIR)
+# find_package(Python COMPONENTS Development Interpreter REQUIRED)
+# include_directories(${Python_INCLUDE_DIRS})
+
+set(Python3_FIND_VIRTUALENV "ONLY")
 execute_process(COMMAND python3-config --prefix
   OUTPUT_VARIABLE Python_ROOT_DIR)
-find_package(Python COMPONENTS Development Interpreter REQUIRED)
+find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
 include_directories(${Python_INCLUDE_DIRS})
 
 # find pybind

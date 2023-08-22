@@ -315,7 +315,10 @@ class Tensor(Value):
 
     def __pow__(self, other):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        if isinstance(other, Tensor):
+            raise NotImplementedError()
+        else:
+            return needle.ops.PowerScalar(other)(self)
         ### END YOUR SOLUTION
 
     def __sub__(self, other):
@@ -377,7 +380,20 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
 
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    # store the computed grad to each Tensor on the backward path
+    for node in reverse_topo_order:
+        grads_node = sum_node_list(node_to_output_grads_list[node])
+        node.grad = grads_node  # store the result here
+        
+        if not node.op: # leaf node
+            continue
+        
+        # each input of the node contains an operation gradient computes the backward grad
+        for input, grad in zip(node.inputs, node.op.gradient_as_tuple(node.grad, node)):
+            if input not in node_to_output_grads_list:
+                node_to_output_grads_list[input] = [grad]
+            else:
+                node_to_output_grads_list[input].append(grad)
     ### END YOUR SOLUTION
 
 
@@ -390,14 +406,30 @@ def find_topo_sort(node_list: List[Value]) -> List[Value]:
     sort.
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    """topo sort from the output Tensor node
+       c1 = 3*a1*a1 + 4*b1*a1 - a1
+       post-order DFS means adding the node to the result while
+       the node is leaf or being visited twice
+    """
+    visited = set()
+    topo_order = []
+    for node in node_list:
+        if node not in visited:
+            topo_sort_dfs(node, visited, topo_order)
+    return topo_order
     ### END YOUR SOLUTION
 
 
 def topo_sort_dfs(node, visited, topo_order):
     """Post-order DFS"""
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    # no need for recursion boundary
+    visited.add(node)
+    
+    for input in node.inputs:
+        if input not in visited:
+            topo_sort_dfs(input, visited, topo_order)
+    topo_order.append(node)
     ### END YOUR SOLUTION
 
 

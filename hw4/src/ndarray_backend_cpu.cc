@@ -44,6 +44,20 @@ void Fill(AlignedArray* out, scalar_t val) {
 }
 
 
+void incrementNbit(std::vector<int32_t> &arr, const std::vector<int32_t> &shape) {
+  /**
+   * @brief Given an array representing shapes-bit(kinda like n-bit) decimal numbers, 
+   *        increment each time.
+   */
+  int32_t carry = 1, sum;
+  // when use unsigned, remember u0 - 1 is a big unsigned number
+  // so here use i > 0, not i >= 0
+  for (size_t i = arr.size(); i > 0 && carry > 0; --i) {
+    sum = arr[i - 1] + carry;
+    arr[i - 1] = sum % shape[i - 1];
+    carry = sum / shape[i - 1];
+  }
+}
 
 
 void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
@@ -63,7 +77,28 @@ void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shap
    *  function will implement here, so we won't repeat this note.)
    */
   /// BEGIN YOUR SOLUTION
-  
+  size_t cnt = 0, n = shape.size();
+
+  // Use the foor loop implementation.
+  // for shape of [2, 3], idx changes: [[0,0], [0,1], [0,2], 
+  //                                    [1,0], [1,1], [1,2]]
+  std::vector<int32_t> idx(n, 0);
+
+  int32_t incre_cnt = 1;
+  for (size_t i = 0; i < shape.size(); ++i) {
+    incre_cnt *= shape[i];
+  }
+
+  while (incre_cnt--) {
+    size_t idx_sum = 0;
+    for (size_t i = 0; i < n; ++i) {
+      idx_sum += (size_t)(strides[i] * idx[i]);
+    }
+
+    out->ptr[cnt++] = a.ptr[offset + idx_sum];
+
+    incrementNbit(idx, shape); // increment each time
+  }
   /// END YOUR SOLUTION
 }
 
@@ -80,7 +115,25 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t>
    *   offset: offset of the *out* array (not a, which has zero offset, being compact)
    */
   /// BEGIN YOUR SOLUTION
-  
+    // reverse implementation of compact function
+  size_t cnt = 0, n = shape.size();
+  std::vector<int32_t> idx(n, 0);
+
+  int32_t incre_cnt = 1;
+  for (size_t i = 0; i < shape.size(); ++i) {
+    incre_cnt *= shape[i];
+  }
+
+  while (incre_cnt--) {
+    size_t idx_sum = 0;
+    for (size_t i = 0; i < n; ++i) {
+      idx_sum += (size_t)(strides[i] * idx[i]);
+    }
+
+    out->ptr[offset + idx_sum] = a.ptr[cnt++];
+
+    incrementNbit(idx, shape); // increment each time
+  }
   /// END YOUR SOLUTION
 }
 
@@ -101,7 +154,26 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vect
    */
 
   /// BEGIN YOUR SOLUTION
-  
+    // reverse implementation of compact function
+  size_t cnt = 0, n = shape.size();
+  std::vector<int32_t> idx(n, 0);
+
+  // use size here to avoid product
+  // uint32_t incre_cnt = 1;
+  // for (size_t i = 0; i < shape.size(); ++i) {
+  //   incre_cnt *= shape[i];
+  // }
+
+  for (size_t j = 0; j < size; ++j) {
+    size_t idx_sum = 0;
+    for (size_t i = 0; i < n; ++i) {
+      idx_sum += (size_t)(strides[i] * idx[i]);
+    }
+
+    out->ptr[offset + idx_sum] = val;
+
+    incrementNbit(idx, shape); // increment each time
+  }
   /// END YOUR SOLUTION
 }
 
@@ -145,7 +217,106 @@ void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
  */
 
 /// BEGIN YOUR SOLUTION
+enum OpType {
+  Mul, Div, Power, Maximum, Eq, Ge, Log, Exp, Tanh
+};
 
+void EwiseBinaryOp(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, OpType op) {
+  for (size_t i = 0; i < a.size; i++) {
+    switch (op)
+    {
+      case Mul: out->ptr[i] = a.ptr[i] * b.ptr[i]; break;
+      case Div: out->ptr[i] = a.ptr[i] / b.ptr[i]; break;
+      case Maximum: out->ptr[i] = std::max(a.ptr[i], b.ptr[i]); break;
+      case Eq: out->ptr[i] = (a.ptr[i] == b.ptr[i]); break;
+      case Ge: out->ptr[i] = (a.ptr[i] >= b.ptr[i]); break;
+      default: break;
+    }
+  }
+}
+
+void EwiseUnaryOp(const AlignedArray& a, AlignedArray* out, OpType op) {
+  for (size_t i = 0; i < a.size; i++) {
+    switch (op)
+    {
+      case Log: out->ptr[i] = std::log(a.ptr[i]); break;
+      case Exp: out->ptr[i] = std::exp(a.ptr[i]); break;
+      case Tanh: out->ptr[i] = std::tanh(a.ptr[i]); break;
+      default: break;
+    }
+  }
+}
+
+void ScalarOp(const AlignedArray& a, scalar_t val, AlignedArray* out, OpType op) {
+  for (size_t i = 0; i < a.size; i++) {
+    switch (op)
+    {
+      case Mul: out->ptr[i] = a.ptr[i] * val; break;
+      case Div: out->ptr[i] = a.ptr[i] / val; break;
+      case Power: out->ptr[i] = std::pow(a.ptr[i], val); break;
+      case Maximum: out->ptr[i] = std::max(a.ptr[i], val); break;
+      case Eq: out->ptr[i] = (a.ptr[i] == val); break;
+      case Ge: out->ptr[i] = (a.ptr[i] >= val); break;
+      default: break;
+    }
+  }
+}
+
+void EwiseMul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseBinaryOp(a, b, out, Mul);
+}
+
+void ScalarMul(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarOp(a, val, out, Mul);
+}
+
+void EwiseDiv(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseBinaryOp(a, b, out, Div);
+}
+
+void ScalarDiv(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarOp(a, val, out, Div);
+}
+
+void ScalarPower(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarOp(a, val, out, Power);
+}
+
+void EwiseMaximum(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseBinaryOp(a, b, out, Maximum);
+}
+
+void ScalarMaximum(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarOp(a, val, out, Maximum);
+}
+
+void EwiseEq(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseBinaryOp(a, b, out, Eq);
+}
+
+void ScalarEq(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarOp(a, val, out, Eq);
+}
+
+void EwiseGe(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseBinaryOp(a, b, out, Ge);
+}
+
+void ScalarGe(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarOp(a, val, out, Ge);
+}
+
+void EwiseLog(const AlignedArray& a, AlignedArray* out) {
+  EwiseUnaryOp(a, out, Log);
+}
+
+void EwiseExp(const AlignedArray& a, AlignedArray* out) {
+  EwiseUnaryOp(a, out, Exp);
+}
+
+void EwiseTanh(const AlignedArray& a, AlignedArray* out) {
+  EwiseUnaryOp(a, out, Tanh);
+}
 /// END YOUR SOLUTION
 
 void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, uint32_t m, uint32_t n,
@@ -164,7 +335,14 @@ void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, uin
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  for (size_t i = 0; i < m; ++i) {
+    for (size_t j = 0; j < p; ++j) {
+      out->ptr[i * p + j] = 0;
+      for (size_t k = 0; k < n; ++k) {
+        out->ptr[i * p + j] += a.ptr[i * n + k] * b.ptr[k * p + j];
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
@@ -194,7 +372,13 @@ inline void AlignedDot(const float* __restrict__ a,
   out = (float*)__builtin_assume_aligned(out, TILE * ELEM_SIZE);
 
   /// BEGIN YOUR SOLUTION 
-   
+  for (size_t i = 0; i < TILE; ++i) {
+    for (size_t j = 0; j < TILE; ++j) {
+      for (size_t k = 0; k < TILE; ++k) {
+        out[i * TILE + j] += a[i * TILE + k] * b[k * TILE + j];  
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
@@ -220,7 +404,21 @@ void MatmulTiled(const AlignedArray& a, const AlignedArray& b, AlignedArray* out
    * 
    */
   /// BEGIN YOUR SOLUTION
-  
+  for (int i = 0; i < m * p; i++) out->ptr[i] = 0;
+  uint32_t m_tiles = (m + TILE - 1) / TILE, n_tiles = (n + TILE - 1) / TILE,
+           p_tiles = (p + TILE - 1) / TILE; // number of tiles
+
+  // each tile occpies a continuous memory of size TILE * TILE
+  // we need to find the number of the tile block
+  for (int i = 0; i < m_tiles; i++) {
+    for (int j = 0; j < p_tiles; j++) {
+      for (int k = 0; k < n_tiles; k++) {
+        AlignedDot(a.ptr + (i * n_tiles + k) * TILE * TILE, 
+                   b.ptr + (k * p_tiles + j) * TILE * TILE, 
+                   out->ptr + (i * p_tiles + j) * TILE * TILE);
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
@@ -235,7 +433,13 @@ void ReduceMax(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  for (size_t i = 0; i < out->size; ++i) {
+    scalar_t m = a.ptr[i * reduce_size];
+    for (size_t j = 1; j < reduce_size; ++j) {
+      m = std::max(m, a.ptr[i * reduce_size + j]);
+    }
+    out->ptr[i] = m;
+  }
   /// END YOUR SOLUTION
 }
 
@@ -250,7 +454,13 @@ void ReduceSum(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  for (size_t i = 0; i < out->size; ++i) {
+    scalar_t m = a.ptr[i * reduce_size];
+    for (size_t j = 1; j < reduce_size; ++j) {
+      m += a.ptr[i * reduce_size + j];
+    }
+    out->ptr[i] = m;
+  }
   /// END YOUR SOLUTION
 }
 
