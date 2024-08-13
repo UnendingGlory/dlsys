@@ -6,6 +6,7 @@ try:
 except:
     pass
 
+pass
 
 def add(x, y):
     """ A trivial 'add' function you should implement to get used to the
