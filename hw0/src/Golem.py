@@ -1,0 +1,3 @@
+class Golem:
+    pass
+    
